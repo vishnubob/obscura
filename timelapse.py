@@ -64,21 +64,22 @@ class TimelapseDriver(object):
     def matrix(self):
         stops = self.fstops.keys()
         stops.sort()
-        speeds = [speed for speed in self.sspeeds.keys() if speed > .001 and speed < 1]
+        stops = [stop for stop in stops if stop <= 5.6]
+        speeds = [speed for speed in self.sspeeds.keys() if speed >= (1 / 125.0) and speed <= (1 / 3.0)]
         speeds.sort()
+        datepath = time.strftime("%m.%d.%y")
         for fstop in stops:
             self.camera[self.AperatureWidgetName] = self.fstops[fstop]
             for speed in speeds:
                 print speed, fstop
                 self.camera[self.ShutterspeedWidgetName] = self.sspeeds[speed]
-                #prefix = "matrix/%s" % fstop
-                prefix = "/ginkgo/bitome/giles/winogradsky/matrix/%s" % fstop
+                prefix = "/ginkgo/bitome/giles/winogradsky/matrix/%s/%s" % (fstop, datepath)
                 if not os.path.isdir(prefix):
                     os.makedirs(prefix)
                 self.camera.capture(copy=True, prefix=prefix, stubfn="_%s" % speed)
-                time.sleep(5)
+                time.sleep(20)
                 self.camera.delete_all_files_on_camera()
-                time.sleep(5)
+                time.sleep(20)
 
 #i = Intervalometer(1, enable_callback=after_dark)
 #i.run()
