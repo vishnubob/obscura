@@ -71,11 +71,14 @@ class TimelapseDriver(object):
             for speed in speeds:
                 print speed, fstop
                 self.camera[self.ShutterspeedWidgetName] = self.sspeeds[speed]
-                prefix = "matrix/%s" % fstop
+                #prefix = "matrix/%s" % fstop
+                prefix = "/ginkgo/bitome/giles/winogradsky/matrix/%s" % fstop
                 if not os.path.isdir(prefix):
                     os.makedirs(prefix)
                 self.camera.capture(copy=True, prefix=prefix, stubfn="_%s" % speed)
+                time.sleep(5)
                 self.camera.delete_all_files_on_camera()
+                time.sleep(5)
 
 #i = Intervalometer(1, enable_callback=after_dark)
 #i.run()

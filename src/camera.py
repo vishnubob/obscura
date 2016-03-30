@@ -253,7 +253,7 @@ class Camera(object):
 
     def get_files_on_camera(self, path=None):
         if path == None:
-            path = "/store_00010001/DCIM/100EOS7D/"
+            path = self.default_path
         (camera, context) = self.camera
         res = gp.check_result(gp.gp_camera_folder_list_files(camera, path, context))
         res = [(path, x[0]) for x in res]
@@ -261,7 +261,7 @@ class Camera(object):
 
     def delete_all_files_on_camera(self, path=None):
         if path == None:
-            path = "/store_00010001/DCIM/100EOS7D/"
+            path = self.default_path
         (camera, context) = self.camera
         res = gp.check_result(gp.gp_camera_folder_delete_all(camera, path, context))
         return res
