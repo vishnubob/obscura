@@ -4,6 +4,7 @@ from pprint import pprint as pp
 import gphoto2 as gp
 import sched
 from datetime import datetime
+import parsedatetime
 import time
 import os
 
@@ -20,8 +21,11 @@ def get_sun(date="today", depression="astronomical", cityname="Boston"):
 def after_dark(**kw):
     sun_info = get_sun(**kw)
     dusk = sun_info["dusk"]
+    dawn = sun_info["dawn"]
     dusk = dusk.replace(tzinfo=None)
-    return dusk < datetime.now()
+    dawn = dawn.replace(tzinfo=None)
+    now = datetime.now()
+    return dusk < now or dawn > now
 
 class Intervalometer(object):
     def __init__(self, period, enable_callback=None):
@@ -46,8 +50,10 @@ class Intervalometer(object):
 class TimelapseDriver(object):
     AperatureWidgetName = "main.capturesettings.aperture"
     ShutterspeedWidgetName = "main.capturesettings.shutterspeed"
+    RootPath = "/ginkgo/bitome/giles/winogradsky/matrix/"
 
-    def __init__(self, camera):
+    def __init__(self, camera, interval=60 * 60):
+        self.interval = interval
         self.camera = camera
         cfg = self.camera.config
         #cam["settings.capturetarget"] = "Memory card"
@@ -61,19 +67,30 @@ class TimelapseDriver(object):
                 speed = float(speed[0]) / float(speed[1])
             self.sspeeds[speed] = ss
 
-    def matrix(self):
+    def get_path(self):
+        datepath = time.strftime("%m.%d.%y")
+        newroot = os.path.join(self.RootPath, datepath)
+        if not os.path.exists(newroot):
+            os.makedirs(newroot)
+        next_count = len(os.listdir(newroot)) + 1
+        newroot = os.path.join(newroot, str(next_count))
+        if not os.path.exists(newroot):
+            os.makedirs(newroot)
+        return newroot
+
+    def trigger(self):
         stops = self.fstops.keys()
         stops.sort()
         stops = [stop for stop in stops if stop <= 5.6]
         speeds = [speed for speed in self.sspeeds.keys() if speed >= (1 / 125.0) and speed <= (1 / 3.0)]
         speeds.sort()
-        datepath = time.strftime("%m.%d.%y")
+        path = self.get_path()
         for fstop in stops:
             self.camera[self.AperatureWidgetName] = self.fstops[fstop]
             for speed in speeds:
                 print speed, fstop
                 self.camera[self.ShutterspeedWidgetName] = self.sspeeds[speed]
-                prefix = "/ginkgo/bitome/giles/winogradsky/matrix/%s/%s" % (fstop, datepath)
+                prefix = os.path.join(path, str(fstop))
                 if not os.path.isdir(prefix):
                     os.makedirs(prefix)
                 self.camera.capture(copy=True, prefix=prefix, stubfn="_%s" % speed)
@@ -81,9 +98,17 @@ class TimelapseDriver(object):
                 self.camera.delete_all_files_on_camera()
                 time.sleep(20)
 
+    def run(self):
+        self.running = True
+        while self.running:
+            if not after_dark():
+                time.sleep(10)
+                continue
+            self.trigger()
+            time.sleep(self.interval)
+
 #i = Intervalometer(1, enable_callback=after_dark)
 #i.run()
-
 camera = Camera()
 timelapse = TimelapseDriver(camera)
-timelapse.matrix()
+timelapse.run()
